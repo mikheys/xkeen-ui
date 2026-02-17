@@ -4,8 +4,8 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const SETTINGS_FILE = path.join(process.cwd(), 'settings.json');
+const BACKUPS_DIR = path.join(process.cwd(), 'backups');
 
-// Функция очистки JSON от служебных полей
 function cleanConfig(obj: any): any {
   if (Array.isArray(obj)) {
     return obj.map(cleanConfig);
@@ -34,15 +34,20 @@ export async function POST(req: Request) {
         const settings = JSON.parse(settingsData);
         const body = await req.json();
         
-        // Очистка перед записью
-        const outbounds = cleanConfig(body.outbounds);
-        const routing = cleanConfig(body.routing);
+        const outboundsClean = cleanConfig(body.outbounds);
+        const routingClean = cleanConfig(body.routing);
 
         const timestamp = new Date().getTime();
-        const outboundsStr = JSON.stringify(outbounds, null, 2);
-        const routingStr = JSON.stringify(routing, null, 2);
+        const isoDate = new Date().toISOString().replace(/[:.]/g, '-');
+        const outboundsStr = JSON.stringify(outboundsClean, null, 2);
+        const routingStr = JSON.stringify(routingClean, null, 2);
 
-        // Временные файлы в контейнере для SFTP
+        // 1. Создаем локальный бекап на МиниПК (это основной архив)
+        sendLog('Создание локального бекапа...', 'info');
+        await fs.mkdir(BACKUPS_DIR, { recursive: true });
+        await fs.writeFile(path.join(BACKUPS_DIR, `04_outbounds_${isoDate}.json`), outboundsStr);
+        await fs.writeFile(path.join(BACKUPS_DIR, `05_routing_${isoDate}.json`), routingStr);
+
         const tmpOutPath = `/tmp/out_${timestamp}.json`;
         const tmpRotPath = `/tmp/rot_${timestamp}.json`;
         await fs.writeFile(tmpOutPath, outboundsStr);
@@ -57,17 +62,12 @@ export async function POST(req: Request) {
           password: settings.password,
         });
 
-        sendLog('Передача файлов на роутер...', 'info');
-        const backupTs = new Date().toISOString().replace(/[:.]/g, '-');
-        
-        await ssh.execCommand(`cp ${settings.remotePath}/04_outbounds.json ${settings.remotePath}/04_outbounds.json.bak-${backupTs}`);
-        await ssh.execCommand(`cp ${settings.remotePath}/05_routing.json ${settings.remotePath}/05_routing.json.bak-${backupTs}`);
-
-        // Используем пуленепробиваемый putFile
+        // БЕКАП НА РОУТЕРЕ УДАЛЕН ДЛЯ СОХРАНЕНИЯ ЧИСТОТЫ ПАПОК
+        sendLog('Обновление файлов на роутере...', 'info');
         await ssh.putFile(tmpOutPath, `${settings.remotePath}/04_outbounds.json`);
         await ssh.putFile(tmpRotPath, `${settings.remotePath}/05_routing.json`);
         
-        sendLog('Файлы обновлены.', 'success');
+        sendLog('Файлы успешно обновлены.', 'success');
 
         await fs.unlink(tmpOutPath);
         await fs.unlink(tmpRotPath);
