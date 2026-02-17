@@ -250,8 +250,36 @@ export default function XKeenUI() {
                   <div key={i} className="bg-[#1e293b] border border-gray-800 rounded-3xl overflow-hidden hover:border-gray-700 transition">
                     <div className="p-6 flex justify-between items-center bg-gray-800/20 border-b border-gray-800"><div className="flex items-center gap-3"><Badge color={rule.outboundTag === 'block' ? 'red' : rule.outboundTag === 'direct' ? 'green' : 'blue'}>{rule.outboundTag.toUpperCase()}</Badge>{rule.network && <Badge color="orange">{rule.network}</Badge>}{rule.port && <Badge color="orange">Port: {rule.port}</Badge>}</div><div className="flex gap-2"><button onClick={() => setEditingRule({ idx: i, data: JSON.parse(JSON.stringify(rule)) })} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-bold flex items-center gap-2 transition"><Edit size={14} /> Edit</button><button onClick={() => { const n = [...routing.rules]; n.splice(i, 1); setRouting({ ...routing, rules: n }); }} className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition"><Trash size={18} /></button></div></div>
                     <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
-                       <div><h4 className="text-xs font-bold text-gray-500 uppercase mb-3"><Globe size={14} className="inline mr-2"/> Domains ({rule.domain?.length || 0})</h4><div className="flex flex-wrap gap-2">{rule.domain?.slice(0, 10).map((d: any, idx: any) => <span key={idx} className="text-xs bg-[#0f172a] border border-gray-700 px-2 py-1 rounded text-gray-300 break-all">{d}</span>)}</div></div>
-                       <div><h4 className="text-xs font-bold text-gray-500 uppercase mb-3"><Shield size={14} className="inline mr-2"/> IPs ({rule.ip?.length || 0})</h4><div className="flex flex-wrap gap-2">{rule.ip?.slice(0, 10).map((ip: any, idx: any) => <span key={idx} className="text-xs bg-[#0f172a] border border-gray-700 px-2 py-1 rounded text-gray-300 break-all">{ip}</span>)}</div></div>
+                       <div>
+                          <h4 className="text-xs font-bold text-gray-500 uppercase mb-3"><Globe size={14} className="inline mr-2"/> Domains ({rule.domain?.length || 0})</h4>
+                          <div className="flex flex-wrap gap-2">
+                             {rule.domain?.slice(0, rule._expandedDomains ? undefined : 10).map((d: any, idx: any) => (
+                               <span key={idx} className="text-xs bg-[#0f172a] border border-gray-700 px-2 py-1 rounded text-gray-300 break-all">{d}</span>
+                             ))}
+                             {rule.domain?.length > 10 && !rule._expandedDomains && (
+                               <button onClick={() => {
+                                 const n = {...routing};
+                                 n.rules[i]._expandedDomains = true;
+                                 setRouting(n);
+                               }} className="text-xs text-blue-500 hover:text-blue-400 font-bold py-1 px-2 transition-colors underline decoration-dotted underline-offset-4">+ смотреть остальные ({rule.domain.length - 10})</button>
+                             )}
+                          </div>
+                       </div>
+                       <div>
+                          <h4 className="text-xs font-bold text-gray-500 uppercase mb-3"><Shield size={14} className="inline mr-2"/> IPs ({rule.ip?.length || 0})</h4>
+                          <div className="flex flex-wrap gap-2">
+                             {rule.ip?.slice(0, rule._expandedIps ? undefined : 10).map((ip: any, idx: any) => (
+                               <span key={idx} className="text-xs bg-[#0f172a] border border-gray-700 px-2 py-1 rounded text-gray-300 break-all">{ip}</span>
+                             ))}
+                             {rule.ip?.length > 10 && !rule._expandedIps && (
+                               <button onClick={() => {
+                                 const n = {...routing};
+                                 n.rules[i]._expandedIps = true;
+                                 setRouting(n);
+                               }} className="text-xs text-emerald-500 hover:text-emerald-400 font-bold py-1 px-2 transition-colors underline decoration-dotted underline-offset-4">+ смотреть остальные ({rule.ip.length - 10})</button>
+                             )}
+                          </div>
+                       </div>
                     </div>
                   </div>
                 ))}
