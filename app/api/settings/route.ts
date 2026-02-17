@@ -4,18 +4,22 @@ import path from 'path';
 
 const SETTINGS_FILE = path.join(process.cwd(), 'settings.json');
 
+const DEFAULT_SETTINGS = {
+  host: '192.168.1.1',
+  username: 'root',
+  port: 22,
+  password: '',
+  remotePath: '/opt/etc/xray/configs'
+};
+
 export async function GET() {
   try {
     const data = await fs.readFile(SETTINGS_FILE, 'utf8');
-    return NextResponse.json(JSON.parse(data));
+    const saved = JSON.parse(data);
+    // Merge saved settings with defaults to ensure no fields are lost
+    return NextResponse.json({ ...DEFAULT_SETTINGS, ...saved });
   } catch (error) {
-    return NextResponse.json({
-      host: '192.168.1.1',
-      username: 'root',
-      port: 22,
-      password: '',
-      remotePath: '/opt/etc/xray/configs'
-    });
+    return NextResponse.json(DEFAULT_SETTINGS);
   }
 }
 
