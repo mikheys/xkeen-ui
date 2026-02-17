@@ -1,24 +1,22 @@
 #!/bin/bash
-echo "--- Updating XKeen Config UI Container ---"
+echo "--- Updating XKeen Config UI ---"
 
-# Переходим в папку скрипта
 cd "$(dirname "$0")"
 
-# Создаем файл настроек, если его нет (предотвращает создание папки Докером)
+echo "Fetching latest changes from GitHub..."
+git checkout update.sh Dockerfile docker-compose.yml 2>/dev/null
+git pull origin main
+
 if [ ! -f settings.json ]; then
     echo "{}" > settings.json
     chmod 666 settings.json
-    echo "Created empty settings.json"
 fi
 
-# Создаем папку бекапов, если её нет
 mkdir -p backups
-chmod 777 backups
+chmod 777 backups 2>/dev/null
 
-# Пересобираем и запускаем в фоне
+echo "Rebuilding Docker container..."
 docker compose up -d --build
-
-# Удаляем старые неиспользуемые образы, чтобы не забивать место на MiniPC
 docker image prune -f
 
-echo "--- Update Complete! Container is running on port 3000 ---"
+echo "--- Update Complete! ---"

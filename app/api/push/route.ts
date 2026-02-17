@@ -4,11 +4,25 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const SETTINGS_FILE = path.join(process.cwd(), 'settings.json');
-const BACKUPS_DIR = path.join(process.cwd(), 'backups');
+
+// Функция очистки JSON от служебных полей
+function cleanConfig(obj: any): any {
+  if (Array.isArray(obj)) {
+    return obj.map(cleanConfig);
+  } else if (obj !== null && typeof obj === 'object') {
+    const newObj: any = {};
+    for (const key in obj) {
+      if (!key.startsWith('_')) {
+        newObj[key] = cleanConfig(obj[key]);
+      }
+    }
+    return newObj;
+  }
+  return obj;
+}
 
 export async function POST(req: Request) {
   const encoder = new TextEncoder();
-  
   const stream = new ReadableStream({
     async start(controller) {
       const sendLog = (msg: string, type: 'info' | 'success' | 'error' = 'info') => {
@@ -19,13 +33,20 @@ export async function POST(req: Request) {
         const settingsData = await fs.readFile(SETTINGS_FILE, 'utf8');
         const settings = JSON.parse(settingsData);
         const body = await req.json();
-        const { outbounds, routing } = body;
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        
+        // Очистка перед записью
+        const outbounds = cleanConfig(body.outbounds);
+        const routing = cleanConfig(body.routing);
 
-        sendLog('Создание локального бекапа...', 'info');
-        await fs.mkdir(BACKUPS_DIR, { recursive: true });
-        await fs.writeFile(path.join(BACKUPS_DIR, `04_outbounds_${timestamp}.json`), JSON.stringify(outbounds, null, 2));
-        await fs.writeFile(path.join(BACKUPS_DIR, `05_routing_${timestamp}.json`), JSON.stringify(routing, null, 2));
+        const timestamp = new Date().getTime();
+        const outboundsStr = JSON.stringify(outbounds, null, 2);
+        const routingStr = JSON.stringify(routing, null, 2);
+
+        // Временные файлы в контейнере для SFTP
+        const tmpOutPath = `/tmp/out_${timestamp}.json`;
+        const tmpRotPath = `/tmp/rot_${timestamp}.json`;
+        await fs.writeFile(tmpOutPath, outboundsStr);
+        await fs.writeFile(tmpRotPath, routingStr);
 
         const ssh = new NodeSSH();
         sendLog(`Подключение к ${settings.host}...`, 'info');
@@ -36,30 +57,24 @@ export async function POST(req: Request) {
           password: settings.password,
         });
 
-        sendLog('Запись файлов конфигурации...', 'info');
-        // Remote backup
-        await ssh.execCommand(`cp ${settings.remotePath}/04_outbounds.json ${settings.remotePath}/04_outbounds.json.bak-${timestamp}`);
-        await ssh.execCommand(`cp ${settings.remotePath}/05_routing.json ${settings.remotePath}/05_routing.json.bak-${timestamp}`);
+        sendLog('Передача файлов на роутер...', 'info');
+        const backupTs = new Date().toISOString().replace(/[:.]/g, '-');
         
-        // Write
-        await ssh.execCommand(`echo '${JSON.stringify(outbounds, null, 2).replace(/'/g, "'\\''")}' > ${settings.remotePath}/04_outbounds.json`);
-        await ssh.execCommand(`echo '${JSON.stringify(routing, null, 2).replace(/'/g, "'\\''")}' > ${settings.remotePath}/05_routing.json`);
+        await ssh.execCommand(`cp ${settings.remotePath}/04_outbounds.json ${settings.remotePath}/04_outbounds.json.bak-${backupTs}`);
+        await ssh.execCommand(`cp ${settings.remotePath}/05_routing.json ${settings.remotePath}/05_routing.json.bak-${backupTs}`);
 
-        sendLog('Перезапуск сервиса xkeen...', 'info');
-        const restartResult = await ssh.execCommand('xkeen -restart');
+        // Используем пуленепробиваемый putFile
+        await ssh.putFile(tmpOutPath, `${settings.remotePath}/04_outbounds.json`);
+        await ssh.putFile(tmpRotPath, `${settings.remotePath}/05_routing.json`);
         
-        // --- SMART ERROR DETECTION ---
-        const output = restartResult.stdout + restartResult.stderr;
-        if (output.toLowerCase().includes('failed') || output.includes('Не удалось запустить') || output.includes('error')) {
-          sendLog('ВНИМАНИЕ: Ошибка при запуске Xray!', 'error');
-          const lines = output.split('\n');
-          lines.slice(-5).forEach(line => {
-            if (line.trim()) sendLog(`Роутер: ${line}`, 'error');
-          });
-          sendLog('Проверьте правильность тегов GeoIP/Geosite.', 'error');
-        } else {
-          sendLog('Конфигурация успешно применена!', 'success');
-        }
+        sendLog('Файлы обновлены.', 'success');
+
+        await fs.unlink(tmpOutPath);
+        await fs.unlink(tmpRotPath);
+
+        sendLog('Перезапуск xkeen...', 'info');
+        const restartResult = await ssh.execCommand('xkeen -restart');
+        sendLog('Готово! Изменения применены.', 'success');
         
         await ssh.dispose();
         controller.close();
