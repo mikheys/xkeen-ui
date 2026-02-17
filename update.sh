@@ -5,7 +5,7 @@ echo "--- Updating XKeen Config UI Container ---"
 cd "$(dirname "$0")"
 
 # Пересобираем и запускаем в фоне
-docker-compose up -d --build
+docker compose up -d --build
 
 # Удаляем старые неиспользуемые образы, чтобы не забивать место на MiniPC
 docker image prune -f
