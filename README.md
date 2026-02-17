@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# XKeen Config UI 🚀
 
-## Getting Started
+Современный и функциональный веб-интерфейс для управления конфигурацией **xKeen** на роутерах Keenetic (Entware). Приложение позволяет удобно настраивать сервера VLESS Reality, HTTP прокси и гибко управлять маршрутизацией прямо через браузер.
 
-First, run the development server:
+![Next.js](https://img.shields.io/badge/Next.js-000-black?style=for-the-badge&logo=next.js)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## ✨ Основные возможности
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+*   📱 **Mobile-First UI:** Полностью адаптивный интерфейс, одинаково удобный на ПК, планшете и смартфоне.
+*   🔒 **SSH Интеграция:** Прямое скачивание (`Fetch`) и выгрузка (`Push`) конфигурации `04_outbounds.json` и `05_routing.json` по протоколу SSH.
+*   🛠 **Мощный редактор серверов:**
+    *   Полная поддержка **VLESS Reality** (UUID, SNI, Fingerprint, Public Key, Short ID).
+    *   Поддержка **HTTP прокси** с авторизацией.
+    *   Настройка типа ответа для **Blackhole** (блокировки).
+*   🛤 **Гибкая маршрутизация:**
+    *   Визуальное управление правилами (Action, Network, Ports).
+    *   **Умный поиск Geosite:** Живой поиск по базе [v2fly/domain-list-community](https://github.com/v2fly/domain-list-community) (GitHub).
+    *   **Точный поиск GeoIP:** Поиск актуальных тегов по базе [Loyalsoldier/geoip](https://github.com/Loyalsoldier/geoip).
+*   🕵️ **Live Diff:** Визуальное сравнение изменений в JSON в реальном времени перед отправкой на роутер.
+*   📈 **Deployment Terminal:** Живое окно логов процесса деплоя — вы видите каждый шаг работы SSH в реальном времени.
+*   🛡 **Безопасность:** Автоматическое создание локальных бекапов и бекапов на роутере перед каждым обновлением.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🚀 Быстрый старт
 
-## Learn More
+### Локальный запуск (Windows/Node.js)
 
-To learn more about Next.js, take a look at the following resources:
+1.  Убедитесь, что у вас установлен [Node.js](https://nodejs.org/).
+2.  Склонируйте репозиторий.
+3.  Запустите установку:
+    ```bash
+    install.bat
+    ```
+4.  Запустите приложение:
+    ```bash
+    start.bat
+    ```
+5.  Откройте в браузере: [http://localhost:3000](http://localhost:3000)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Запуск в Docker (Fedora/Ubuntu/MiniPC)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Приложение полностью готово к работе в контейнере:
 
-## Deploy on Vercel
+1.  Скопируйте папку с проектом на ваш сервер.
+2.  Дайте права на запуск скрипту обновления:
+    ```bash
+    chmod +x update.sh
+    ```
+3.  Запустите сборку и старт:
+    ```bash
+    ./update.sh
+    ```
+4.  Приложение будет доступно на порту `3000`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## ⚙️ Настройка подключения
+
+Перейдите во вкладку **SSH Connect** и введите данные вашего роутера:
+*   **Host IP:** Адрес роутера (обычно `192.168.1.1`).
+*   **SSH Port:** Порт Entware (обычно `22` или `222`).
+*   **Remote Path:** Путь к конфигам (по умолчанию `/opt/etc/xray/configs`).
+
+> **Важно:** Ваши настройки сохраняются в файл `settings.json`, который автоматически добавлен в `.gitignore` и не попадет в публичный репозиторий.
+
+---
+
+## 📦 Структура проекта
+
+*   `/app/api/` — Backend логика (SSH, GitHub API, кэширование).
+*   `/lib/` — Утилиты для работы по SSH.
+*   `/backups/` — Папка с автоматическими локальными копиями ваших конфигов.
+*   `Dockerfile` & `docker-compose.yml` — Инструкции для контейнеризации.
+
+---
+
+## 🤝 Благодарности
+
+Приложение работает благодаря открытым базам данных сообщества:
+*   [v2fly/domain-list-community](https://github.com/v2fly/domain-list-community)
+*   [Loyalsoldier/geoip](https://github.com/Loyalsoldier/geoip)
+*   [Xray-core](https://github.com/XTLS/Xray-core)
+
+---
+*Разработано специально для сообщества пользователей Keenetic и xKeen.*

@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  xkeen-ui:
+    build: .
+    container_name: xkeen-ui
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./settings.json:/app/settings.json
+      - ./backups:/app/backups
+    environment:
+      - NODE_ENV=production
